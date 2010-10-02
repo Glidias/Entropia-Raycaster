@@ -1,0 +1,132 @@
+body
+{
+ font-family: "Verdana" "Arial";
+ color: #000000;
+ font-size: 12pt;
+ background: #ffffff;
+ padding: 0px;
+ margin: 0px;
+ text-align: center;
+}
+
+#preload
+{
+	display: none;
+}
+
+p
+{
+}
+
+#container
+{
+	margin: auto;
+	margin-top: 100px;
+	text-align: center;
+	background: #006f00;
+	position: relative;
+	height: 500px;
+	width: 1000px;
+	overflow: hidden;
+}
+
+
+#frame
+{
+	position: relative;
+	overflow: hidden;
+	top: 0px;
+	left: 0px;
+	height: 500px;
+	width: 1000px;
+}
+
+#sky
+{
+	height: 500px;
+	width: 1000px;
+	position: absolute;
+	left: 0px;
+	top: 0px;
+	background: url(sky3.jpg);
+}
+
+
+#floor
+{
+	height: 250px;
+	width: 0px;
+	position: absolute;
+	left: 0px;
+	top: 250px;
+	background: #005f00;
+}
+
+.column
+{
+	position: absolute;
+}
+
+.split
+{
+	position: absolute;
+	opacity: 0.1;
+	filter: progid:DXImageTransform.Microsoft.Alpha(opacity=10);
+	background: #000000;
+}
+
+.outline
+{
+	position: absolute;
+	opacity: 0.5;
+	filter: progid:DXImageTransform.Microsoft.Alpha(opacity=50);
+}
+
+.spritewrapper
+{
+	position: absolute;
+	overflow: hidden;
+	left: 0px;
+	top: 0px;
+	width: 0px;
+	height: 0px;
+}
+
+.sprite
+{
+	position: absolute;
+	left: 0px;
+	top: 0px;
+	width: 0px;
+	height: 0px;
+}
+
+
+#pauseFrame
+{
+	position: absolute;
+	top: 0px;
+	left: 0px;
+	overflow: hidden;
+	height: 250px;
+	width: 1000px;
+	color: #ffffff;
+	background: #000000;
+	display: none;
+	opacity: 0.5;
+	filter: progid:DXImageTransform.Microsoft.Alpha(opacity=50);
+	font-size: 30pt;
+	padding-top: 250px;
+	z-index: 1000;
+}
+
+#crosshair
+{
+	position: absolute;
+	top: 242px;
+	left: 492px;
+	width: 16px;
+	height: 16px;
+	background: url(sprites/crosshair.png);
+	z-index: 1000;
+}

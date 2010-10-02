@@ -1,0 +1,940 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xml:lang="en" xmlns="http://www.w3.org/1999/xhtml" lang="en"><head>
+
+
+ <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+ <title>Raycaster</title>
+ <link rel="stylesheet" type="text/css" href="raycaster5_files/raycaster5.css">
+<script type="text/javascript">
+
+
+// units are in "meters":
+var CHARSIZE = .3;
+var VIEWHEIGHT = 1.5;
+var MAX_HEIGHT = 4;
+var MAXSTEP = .41;
+
+// in meters per second:
+var WALKSPEED = 5.4;
+var RUNSPEED = 3.4;
+var TURNSPEED = 3.8;
+
+var VIEWBOB = 0.1;
+var VIEWBOBSPEED = 10;
+
+var KEY_A = 65;
+var KEY_B = 66;
+var KEY_D = 68;
+var KEY_H = 72;
+var KEY_I = 73;
+var KEY_R = 82;
+var KEY_S = 83;
+var KEY_T = 84;
+var KEY_V = 86;
+var KEY_W = 87;
+var KEY_ARROW_UP = 38;
+var KEY_ARROW_DOWN = 40;
+var KEY_ARROW_LEFT = 37;
+var KEY_ARROW_RIGHT = 39;
+var KEY_WII_UP = 175;
+var KEY_WII_DOWN = 176;
+var KEY_WII_LEFT = 178;
+var KEY_WII_RIGHT = 177;
+var KEY_WII_B = 171;
+
+
+var player = { "x" : 0, "y" : 0, "h" : 0, "angle" : 0, "vx" : 0, "vy" : 0 };
+
+var viewBob = VIEWHEIGHT;
+var bobTime = 0;
+
+var pdx;
+var pdy;
+
+var dx1;
+var dy1;
+var dx2;
+var dy2;
+var ddx;
+var ddy;
+var playerXInt;
+var playerYInt;
+
+var edges;
+var raycount;
+var columncount;
+
+var frameArray = [];
+var curframe;
+
+var outlineCount = 0;
+var divCount = 0;
+
+var mapHeight = [];
+var mapWallColor = [];
+var mapFloorColor = [];
+var mapDepth;
+var mapWidth;
+var mapWallIdxCount;
+
+var wallColors;
+var floorColors;
+
+var lastmousex = -1;
+var verbose = false;
+var debugMode = false;
+var renderingEnabled = true;
+var showStats = false;
+var showHelp = true;
+var showSplits = false;
+
+var keys = new Array(256);
+var toggles = [];
+var keysCache = new Array(256);
+var isPaused = false;
+
+var wallCache = [];
+var splitList = [];
+
+// framerate and timer stuff
+var frames = 0;
+var fps = 0;
+var lastFrameSeconds = 0;
+var curTime;
+var prevTime;
+var frameCountStart = 0;
+var myInterval;
+
+
+
+
+function ClearLog()
+{
+	document.getElementById("log").innerHTML = "";
+}
+
+function Log(text)
+{
+	document.getElementById("log").innerHTML += text + "<br />";
+}
+
+
+function IntFromHex(c)
+{
+	return parseInt(c, 16);
+}
+
+function toHex(v)
+{
+	// convert a byte to its hex value
+	v = parseInt(v);
+	v = Math.max(0, Math.min(255, v));
+	var h = "0123456789ABCDEF";
+	return h.substr(v>>4, 1) + h.substr(v % 16, 1);
+}
+
+
+var frameObj;
+function SwapBuffers()
+{
+	frameObj.innerHTML = frameArray.join("");
+	frameArray = [];
+}
+
+function AddToggle(key, func) {
+	toggles[key] = func;
+}
+
+
+
+// BEGIN INIT
+// ==========
+
+function BuildColors()
+{
+	wallColors = [
+		["#ff00ff", "#ff00ff", "#ff00ff", "#ff00ff"],
+		["#7f7f7f", "#9f9f9f", "#bfbfbf", "#5f5f5f"],
+		["#777777", "#979797", "#b7b7b7", "#575757"],
+		["#8f6f4f", "#6f5f3f", "#8f6f4f", "#6f5f3f"],
+		["#5f3f1f", "#4f3f1f", "#5f3f1f", "#4f3f1f"],
+		["#573717", "#473717", "#573717", "#473717"],
+		["#df1f1f", "#df1f1f", "#df1f1f", "#df1f1f"]];
+	floorColors = ["#00ff00", "#00ef00", "#00df00", "#00af00", "#ff00ff"];
+	//floorColors = ["#ff0000", "#00ff00", "#5f5fff", "#00af00", "#ff00ff"];
+}
+
+
+function BuildMap()
+{
+	mapHeight = [
+		[4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,1.2,1.2,1.2,1.2,1.4,1.4,1.4,1.6,1.6,1.6,1.8,1.8,1.8,2.0,2.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,1.2,1.2,1.2,1.2,1.4,1.4,1.4,1.6,1.6,1.6,1.8,1.8,1.8,2.0,2.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,1.0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,1.0,1.0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,1.0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,0.8,0.8,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,4.0,4.0,  0,  0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,  0,  0,4.0 ],
+		[4.0,4.0,4.0,  0,  0,4.0,4.0,4.0,0.8,0.8,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,4.0,4.0,  0,  0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,0.8,0.8,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,0.6,0.6,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,0.6,0.6,  0,4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,4.0,4.0,  0,  0,4.0,4.0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,0.6,0.6,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,4.0,4.0,  0,  0,4.0,4.0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,0.4,0.4,0.4,0.4,0.2,0.2,0.2,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,  0,  0,4.0,4.0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,0.4,0.4,0.4,0.4,0.2,0.2,0.2,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,  0,  0,4.0,4.0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,  0,  0,4.0,  0,  0,4.0,4.0,4.0,  0,  0,4.0,4.0,  0,  0,4.0,4.0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,4.0,4.0,  0,  0,4.0,4.0,  0,  0,4.0,4.0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,4.0,4.0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,  0,  0,4.0,0.3,0.3,4.0,  0,  0,4.0,4.0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,0.6,0.6,4.0,  0,  0,  0,  0,4.0,4.0,  0,  0,4.0,4.0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,1.2,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,0.9,0.9,4.0,  0,  0,  0,  0,4.0,4.0,  0,  0,4.0,4.0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,1.2,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,1.2,1.2,4.0,  0,  0,4.0,4.0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,1.2,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,1.5,1.5,4.0,  0,  0,4.0,4.0,  0,  0,  0,  0,  0,  0,4.0,1.0,1.0,4.0 ],
+		[4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,1.2,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,1.8,1.8,4.0,  0,  0,  0,  0,  0,  0,4.0,4.0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,1.2,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,2.1,2.1,2.1,4.0,  0,  0,  0,  0,  0,  0,4.0,4.0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0, -2, -2,4.0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,2.1,2.1,2.1,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,  0,4.0 ],
+		[4.0, -2, -2,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,1.0,  0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,1.0,1.0,  0,  0,  0,  0,  0,  0,1.0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,1.0,1.0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,1.0,  0,  0,  0,1.0,  0,  0,  0,  0,1.0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,1.0,1.0,  0,4.0 ],
+		[4.0,  0,1.0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,1.0,  0,  0,  0,  0,  0,1.0,  0,  0,  0,1.0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,1.0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,1.0,  0,  0,  0,1.0,  0,1.0,1.0,  0,  0,  0,  0,1.0,  0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,1.0,  0,  0,  0,  0,  0,1.0,  0,  0,  0,  0,  0,  0,  0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,1.0,  0,  0,  0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,1.0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0 ]];
+	mapFloorColor = [
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ]];
+	mapWallColor = [
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 4, 5, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 5, 4, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 4, 5, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 5, 4, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 4, 5, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 5, 4, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 4, 5, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 5, 4, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 4, 5, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 5, 4, 5, 4, 5, 4, 5, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 4, 5, 4, 5, 4, 5, 4, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
+		[ 1, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 2 ],
+		[ 2, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 1 ],
+		[ 1, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 2 ],
+		[ 2, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 1 ],
+		[ 1, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 2 ],
+		[ 2, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 1 ],
+		[ 1, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 2 ],
+		[ 2, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 1 ],
+		[ 1, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 2 ],
+		[ 2, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 1 ],
+		[ 1, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 2 ],
+		[ 2, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 1 ],
+		[ 1, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 2 ],
+		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ]];
+	// depth x width
+	mapDepth = mapHeight.length;
+	mapWidth = mapHeight[0].length;
+	mapWallIdxCount = mapWidth * (mapDepth + 1) + mapDepth * (mapWidth + 1);
+}
+
+
+function Init() {
+	BuildColors();
+	BuildMap();
+
+	AddToggle(KEY_B, function() { debugMode = !debugMode; });
+	AddToggle(KEY_H, function() { showHelp = !showHelp; });
+	AddToggle(KEY_I, function() { showStats = !showStats; });
+	AddToggle(KEY_R, function() { renderingEnabled = !renderingEnabled; });
+	AddToggle(KEY_T, function() { showSplits = !showSplits; });
+	AddToggle(KEY_V, function() { verbose = !verbose; });
+	curframe = 0;
+	player.x = 1.5;
+	player.y = 1.5;
+	player.h = mapHeight[1][1];
+	player.angle = Math.PI / 4.0;
+	//curTime = new Date().getTime();
+	frameCountStart = new Date().getTime();
+	
+	document.getElementById("loading").style.display = "none";
+	frameObj = document.getElementById("frame");
+	Start();
+}
+
+
+
+function RenderOutline(x1, y1, x2, y2, z, c) {
+	var cInt = parseInt(c, 16);
+	var r = parseInt(c.substring(1, 3), 16);
+	var g = parseInt(c.substring(3, 5), 16);
+	var b = parseInt(c.substring(5, 7), 16);
+	var r2 = parseInt(r / 2);
+	var g2 = parseInt(g / 2);
+	var b2 = parseInt(b / 2);
+	var c2 = "#" + toHex(r2) + toHex(g2) + toHex(b2);
+	outlineCount++;
+	if (x2 - x1 > 1 && y2 - y1 > 1) {
+		frameArray.push("<div class=\"outline\" id=\"outline" + outlineCount + "\" style=\"");
+		frameArray.push("background: " + c2 + "; ");
+		frameArray.push("border: 1px solid " + c + "; ");
+		frameArray.push("left: " + x1 + "px; ");
+		frameArray.push("top: " + y1 + "px; ");
+		frameArray.push("width: " + (x2 - x1 - 2) + "px; ");
+		frameArray.push("height: " + (y2 - y1 - 2) + "px; ");
+		frameArray.push("z-index: " + z + "; ");
+		frameArray.push(" \">");
+		frameArray.push("</div>");
+	} else {
+	}
+}
+
+
+function AddDiv(left, right, top1, top2, bottom, z, c) {
+	if (top1 > 500 && top2 > 500) return;
+	if (bottom < 0) return;
+	if (top1 < 0 && top2 < 0) {
+		top1 = 0;
+		top2 = 0;
+	}
+
+	var width = right - left;
+	if (width < 1) return;
+	
+	if (bottom > 500) bottom = Math.max(top1, top2, 500);
+	
+	divCount++;
+	
+	if (debugMode) {
+		RenderOutline(left, Math.min(top1, top2), right, bottom, z, c);
+		return;
+	}
+ 	
+	if (top1 < top2) {
+		// \
+		//frameArray.push("<div class=\"column\" id=\"wall" + divCount + "\" style=\"z-index: " + z + "; left: " + left + "px; top: " + top1 + "px; height: " + (bottom - top2) + "px; border-top: " + (top2 - top1) + "px solid transparent; border-left: " + width + "px solid " + c + "; \">");
+		frameArray.push("<div class=\"column\" id=\"wall");
+		frameArray.push(divCount);
+		frameArray.push("\" style=\"z-index: ");
+		frameArray.push(z);
+		frameArray.push("; left: ");
+		frameArray.push(left);
+		frameArray.push("px; top: ");
+		frameArray.push(top1);
+		frameArray.push("px; height: ");
+		frameArray.push(bottom - top2);
+		frameArray.push("px; border-top: ");
+		frameArray.push(top2 - top1);
+		frameArray.push("px solid transparent; border-left: ");
+		frameArray.push(width);
+		frameArray.push("px solid ");
+		frameArray.push(c);
+		frameArray.push("; \">");
+		if (verbose) frameArray.push("\\" + z);
+		frameArray.push("</div>");
+	} else if (top1 > top2) {
+		// /
+		//frameArray.push("<div class=\"column\" id=\"wall" + divCount + "\" style=\"z-index: " + z + "; left: " + left + "px; top: " + top2 + "px; height: " + (bottom - top1) + "px; border-top: " + (top1 - top2) + "px solid transparent; border-right: " + width + "px solid " + c + "; \">");
+		frameArray.push("<div class=\"column\" id=\"wall");
+		frameArray.push(divCount);
+		frameArray.push("\" style=\"z-index: ");
+		frameArray.push(z);
+		frameArray.push("; left: ");
+		frameArray.push(left);
+		frameArray.push("px; top: ");
+		frameArray.push(top2);
+		frameArray.push("px; height: ");
+		frameArray.push(bottom - top1);
+		frameArray.push("px; border-top: ");
+		frameArray.push(top1 - top2);
+		frameArray.push("px solid transparent; border-right: ");
+		frameArray.push(width);
+		frameArray.push("px solid ");
+		frameArray.push(c);
+		frameArray.push("; \">");
+		if (verbose) frameArray.push("/" + z);
+		frameArray.push("</div>");
+	} else {
+		// -
+		//frameArray.push("<div class=\"column\" id=\"wall" + divCount + "\" style=\"z-index: " + z + "; left: " + left + "px; top: " + top1 + "px; width: " + width + "px; height: " + (bottom - top1) + "px; background: " + c + "; \">");
+		frameArray.push("<div class=\"column\" id=\"wall");
+		frameArray.push(divCount);
+		frameArray.push("\" style=\"z-index: ");
+		frameArray.push(z);
+		frameArray.push("; left: ");
+		frameArray.push(left);
+		frameArray.push("px; top: ");
+		frameArray.push(top1);
+		frameArray.push("px; width: ");
+		frameArray.push(width);
+		frameArray.push("px; height: ");
+		frameArray.push(bottom - top1);
+		frameArray.push("px; background: ");
+		frameArray.push(c);
+		frameArray.push("; \">");
+		if (verbose) frameArray.push("=" + z);
+		frameArray.push("</div>");
+	}
+}
+
+
+function AddSplitDiv(left, right, top, bottom, c) {
+	var width = right - left;
+	
+	//frameArray.push("<div class=\"split\" id=\"wall" + divCount + "\" style=\"z-index: " + z + "; left: " + left + "px; top: " + top1 + "px; width: " + width + "px; height: " + (bottom - top1) + "px; background: " + c + "; \">");
+	frameArray.push("<div class=\"split\" style=\"z-index: 10000; left: ");
+	frameArray.push(left);
+	frameArray.push("px; top: ");
+	frameArray.push(top);
+	frameArray.push("px; width: ");
+	frameArray.push(width);
+	frameArray.push("px; height: ");
+	frameArray.push(bottom - top);
+	frameArray.push("px; \"></div>");
+}
+
+
+function GetWallIndex(x1, y1, x2, y2) {
+	if (x1 == x2) return mapWidth * Math.min(y1, y2) + x1;
+	return mapWidth * (mapDepth + 1) + (mapWidth + 1) * y1 + Math.min(x1, x2);
+}
+
+
+
+// Cast a ray until a wall of MAXHEIGHT is found
+function CastRay(dx, dy) {
+	raycount++;
+	var xt; // time until the next x-intersection
+	var dxt; // time between x-intersections
+	var yt; // time until the next y-intersection
+	var dyt; // time between y-intersections
+	var dxi; // direction of the x-intersection
+	var dyi; // direction of the y-intersection
+	var xi = playerXInt;
+	var yi = playerYInt;
+	var xoff = player.x - xi;
+	var yoff = player.y - yi;
+	if (dx < 0) {
+		xt = -xoff / dx;
+		dxt = -1 / dx;
+		dxi = -1;
+	} else {
+		xt = (1 - xoff) / dx;
+		dxt = 1 / dx;
+		dxi = 1;
+	}
+	if (dy < 0) {
+		yt = -yoff / dy;
+		dyt = -1 / dy;
+		dyi = -1;
+	} else {
+		yt = (1 - yoff) / dy;
+		dyt = 1 / dy;
+		dyi = 1;
+	}
+	var t = 0; // intersection time
+	var done = 0;
+	var c = 0; // intersection count
+	var nodes = [];
+	var prevH = mapHeight[yi][xi];
+	var h;
+	var prevFloorColor = mapFloorColor[yi][xi];
+	var wallIdx;
+	while (done == 0) {
+		if (xt < yt) {
+			xi += dxi;
+			t = xt;
+			side = dxi > 0 ? 1 : 3;
+			wallIdx = GetWallIndex(xi - dxi, yi, xi, yi);
+			xt += dxt;
+		} else {
+			yi += dyi;
+			t = yt;
+			side = dyi > 0 ? 2 : 0;
+			wallIdx = GetWallIndex(xi, yi - dyi, xi, yi);
+			yt += dyt;
+		}
+		h = mapHeight[yi][xi];
+		xint = player.x + t * dx;
+		yint = player.y + t * dy;
+		nodes.push({"wallIdx" : wallIdx, "t" : t, "h1" : prevH, "h2" : h, "z" : 500 - c, "fColor" : prevFloorColor, "wColor" : mapWallColor[yi][xi], "side" : side });
+		prevH = h;
+		prevFloorColor = mapFloorColor[yi][xi];;
+		if (h == MAX_HEIGHT) done = 1;
+		c += 2;
+		if (c > 400) {
+			t = 400;
+			done = 1;
+		}
+	}
+	return nodes;
+}
+
+
+var skyOffConst = -2000 / Math.PI
+function RenderSky() {
+	var skyOff = parseInt(player.angle * skyOffConst);
+	// Don't put the sky in the frame array, because that's too slow.  Instead, keep it separate and just change the offset
+	document.getElementById("sky").style.backgroundPosition = skyOff + "px 0px";
+}
+
+
+function Project(t, h) {
+	return Math.floor(250 - 250 * (h - player.h - viewBob) / t);
+}
+
+
+function CacheWall(wallIdx, x1, x2, top1, top2, bottom, z, color) {
+	if (wallCache[wallIdx]) {
+		if (x1 < wallCache[wallIdx].x1) {
+			wallCache[wallIdx].x1 = x1;
+			wallCache[wallIdx].top1 = top1;
+		}
+		if (x2 > wallCache[wallIdx].x2) {
+			wallCache[wallIdx].x2 = x2;
+			wallCache[wallIdx].top2 = top2;
+		}
+		wallCache[wallIdx].bottom = Math.max(wallCache[wallIdx].bottom, bottom);
+	} else {
+		wallCache[wallIdx] = {
+			"x1" : x1,
+			"x2" : x2,
+			"top1" : top1,
+			"top2" : top2,
+			"bottom" : bottom,
+			"z" : z,
+			"color" : color };
+	}
+}
+
+
+function Split(left, right, firstIntIdx, prevH, prevLeftY, prevRightY) {
+	var leftX = left.x;
+	var rightX = right.x;
+	var leftNodes = left.nodes;
+	var rightNodes = right.nodes;
+	splitList.push({ "left" : leftX, "right" : rightX, "leftY" : prevLeftY, "rightY" : prevRightY });
+	if (rightX - leftX > 1) {
+		var commonIntersections = Math.min(leftNodes.length, rightNodes.length);
+		for (var i = firstIntIdx; i < commonIntersections; i++) {
+			var leftNode = leftNodes[i];
+			var rightNode = rightNodes[i];
+			if (leftNode.wallIdx == rightNode.wallIdx) {
+				var h1 = leftNode.h1;
+				var h2 = leftNode.h2;
+				var leftY1 = Project(leftNode.t, h1);
+				var leftY2 = Project(leftNode.t, h2);
+				var rightY1 = Project(rightNode.t, h1);
+				var rightY2 = Project(rightNode.t, h2);
+				var z = leftNodes[i].z
+				if (h1 < h2) {
+					CacheWall(leftNode.wallIdx, leftX, rightX, leftY2, rightY2, Math.max(leftY1, rightY1) + 2, z, wallColors[leftNode.wColor][leftNode.side]);
+				}
+				CacheWall(mapWallIdxCount + leftNode.wallIdx, leftX, rightX, leftY1, rightY1, Math.max(prevLeftY, prevRightY) + 2, z + 1, floorColors[leftNode.fColor]);
+				prevH = h2;
+				prevLeftY = leftY2;
+				prevRightY = rightY2;
+			} else {
+				var middleX = Math.floor((leftX + rightX) / 2);
+				var middleDx = dx1 + ddx * middleX;
+				var middleDy = dy1 + ddy * middleX;
+				var middle = {"x" : middleX, "nodes" : CastRay(middleDx, middleDy) };
+				var prevMiddleY = Math.max(prevLeftY, prevRightY);
+				Split(left, middle, i, prevH, prevLeftY, prevMiddleY);
+				Split(middle, right, i, prevH, prevMiddleY, prevRightY);
+				break;
+			}
+		}
+		// if either list is longer, it'll be handled already by the above code
+	} else {
+		// the rays are adjacent
+		// draw the left intersections as single-pixel-wide
+		for (var i = firstIntIdx; i < leftNodes.length; i++) {
+			var leftNode = leftNodes[i];
+			var h1 = leftNode.h1;
+			var h2 = leftNode.h2;
+			var leftY1 = Project(leftNode.t, h1);
+			var leftY2 = Project(leftNode.t, h2);
+			var z = leftNode.z
+			if (h1 < h2) {
+				CacheWall(leftNode.wallIdx, leftX, rightX, leftY2, leftY2, leftY1 + 2, z, wallColors[leftNode.wColor][leftNode.side]);
+			}
+			CacheWall(mapWallIdxCount + leftNode.wallIdx, leftX, rightX, leftY1, leftY1, prevLeftY + 2, z + 1, floorColors[leftNode.fColor]);
+			prevLeftY = leftY2;
+		}
+	}
+}
+
+
+function RenderMap() {
+	var left = {"x" : 0, "nodes" : CastRay(dx1, dy1) };
+	var right = {"x" : 1000, "nodes" : CastRay(dx2, dy2) };
+	Split(left, right, 0, player.h, 500, 500);
+
+	if (!renderingEnabled) return;
+	for (var wallIdx in wallCache) {
+		var wall = wallCache[wallIdx];
+		AddDiv(wall.x1, wall.x2, wall.top1, wall.top2, wall.bottom, wall.z, wall.color);
+	}
+	
+	if (showSplits) {
+		for (var splitIdx in splitList) {
+			var split = splitList[splitIdx];
+			//AddSplitDiv(split.left, split.right, 0, Math.max(split.leftY, split.rightY), "#000000");
+			AddSplitDiv(split.left, split.right, 0, 500, "#000000");
+		}
+	}
+}
+
+
+function ShowStats() {
+	Log(raycount + " rays cast");
+	Log(divCount + " objects rendered");
+	Log("Position: (" + player.x + ", " + player.y +")");
+	Log("Angle: " + player.angle);
+	Log("Frame rate: " + fps);
+}
+
+
+function ShowHelp() {
+	Log("WASD:  Move");
+	Log("Arrows or Mouse:  Turn");
+	Log("B:  Toggle debug");
+	Log("H:  Toggle help");
+	Log("I:  Toggle stats");
+	Log("R:  Toggle display");
+	Log("T:  Toggle splits");
+}
+
+
+function Render() {
+	frames++;
+	outlineCount = 0;
+	divCount = 0;
+	wallCache = [];
+	splitList = [];
+
+	curTime = new Date().getTime();
+	lastFrameSeconds = (curTime - prevTime) / 1000;
+	if (curTime - frameCountStart > 1000) {
+		fps = parseInt(100000 * frames / (curTime - frameCountStart)) / 100;
+		frames = 0;
+		frameCountStart = curTime;
+	}
+	prevTime = curTime;
+	
+	
+	ClearLog();
+	
+	DoMove();
+
+	DoPreCalcs();
+	
+	raycount = 0;
+
+	RenderSky();
+	RenderMap();
+	
+	SwapBuffers();
+
+	if (showStats) ShowStats();
+	if (showHelp) ShowHelp();
+}
+
+
+function DoPreCalcs() {
+	if (player.angle > 2 * Math.PI) player.angle -= 2 * Math.PI;
+	if (player.angle < 0) player.angle += 2 * Math.PI;
+	pdx = Math.cos(player.angle);
+	pdy = Math.sin(player.angle);
+	dx1 = pdx + pdy; // ray for left edge of screen
+	dy1 = pdy - pdx;
+	dx2 = pdx - pdy; // ray for right edge of screen
+	dy2 = pdy + pdx;
+	ddx = (dx2 - dx1) / 1000; // difference between rays
+	ddy = (dy2 - dy1) / 1000;
+	playerXInt = Math.floor(player.x);
+	playerYInt = Math.floor(player.y);
+}
+
+
+
+// BEGIN MOVEMENT
+// ==============
+
+function MoveX(ox, oy, vx, vy, size) {
+	var newx = ox + vx;
+	var yi = Math.floor(oy);
+	var h = mapHeight[yi][Math.floor(ox)];
+	if (vx > 0){
+		var xi = Math.floor(newx + size);
+		if (mapHeight[yi][xi] < h + MAXSTEP) {
+			ox = newx;
+		} else {
+			ox = xi - size;
+		}
+	} else {
+		var xi = Math.floor(newx - size);
+		if (mapHeight[yi][xi] < h + MAXSTEP) {
+			ox = newx;
+		} else {
+			ox = xi + 1 + size;
+		}
+	}
+	return ox;
+}
+
+function MoveY(ox, oy, vx, vy, size) {
+	var newy = oy + vy;
+	var xi = Math.floor(ox);
+	var h = mapHeight[Math.floor(oy)][xi];
+	if (vy > 0) {
+		var yi = Math.floor(newy + size);
+		if (mapHeight[yi][xi] < h + MAXSTEP) {
+			oy = newy;
+		} else {
+			oy = yi - size;
+		}
+	} else {
+		var yi = Math.floor(newy - size);
+		if (mapHeight[yi][xi] < h + MAXSTEP) {
+			oy = newy;
+		} else {
+			oy = yi + 1 + size;
+		}
+	}
+	return oy;
+}
+
+
+function MoveBy(vx, vy) {
+	player.x = MoveX(player.x, player.y, vx, vy, CHARSIZE);
+	player.y = MoveY(player.x, player.y, vx, vy, CHARSIZE);
+	player.h = mapHeight[Math.floor(player.y)][Math.floor(player.x)];
+}
+
+
+function Forward() {
+	MoveBy(lastFrameSeconds * WALKSPEED * pdx, lastFrameSeconds * WALKSPEED * pdy);
+}
+
+function Back() {
+	MoveBy(-lastFrameSeconds * WALKSPEED * pdx, -lastFrameSeconds * WALKSPEED * pdy);
+}
+
+function StrafeLeft() {
+	MoveBy(lastFrameSeconds * WALKSPEED * pdy, -lastFrameSeconds * WALKSPEED * pdx);
+}
+
+function StrafeRight() {
+	MoveBy(-lastFrameSeconds * WALKSPEED * pdy, lastFrameSeconds * WALKSPEED * pdx);
+}
+
+
+function DoToggles() {
+	for (var k in toggles) {
+		if (keys[k] > 0) {
+			if (!keysCache[k]) toggles[k]();
+			keysCache[k] = true;
+		} else {
+			keysCache[k] = false;
+		}
+	}
+}
+
+
+function DoMove() {
+	var moving = false;
+	if (keys[KEY_W] > 0 || keys[KEY_ARROW_UP] > 0 || keys[KEY_WII_UP]) {
+		Forward();
+		moving = true;
+	}
+	if (keys[KEY_S] > 0 || keys[KEY_ARROW_DOWN] > 0 || keys[KEY_WII_DOWN]) {
+		Back();
+		moving = true;
+	}
+	if (keys[KEY_ARROW_LEFT] > 0) {
+		Left();
+		moving = true;
+	}
+	if (keys[KEY_ARROW_RIGHT] > 0) {
+		Right();
+		moving = true;
+	}
+	if (keys[KEY_A] > 0 || keys[KEY_WII_LEFT]){
+		StrafeLeft();
+		moving = true;
+	}
+	if (keys[KEY_D] > 0 || keys[KEY_WII_RIGHT]) {
+		StrafeRight();
+		moving = true;
+	}
+
+	if (moving) {
+		bobTime += lastFrameSeconds;
+		viewBob = VIEWHEIGHT + VIEWBOB * Math.sin(bobTime * VIEWBOBSPEED);
+	}
+}
+
+function Rotate(i) {
+	player.angle += i;
+}
+
+function Left() {
+	Rotate(-lastFrameSeconds * TURNSPEED);
+}
+
+function Right() {
+	Rotate(lastFrameSeconds * TURNSPEED);
+}
+
+
+
+function KeyDown(e) {
+	var keynum;
+	if (window.event) {
+		keynum = e.keyCode;
+	} else if (e.which) {
+		keynum = e.which;
+	}
+	keys[keynum] = 1;
+	DoToggles();
+}
+
+
+function KeyUp(e) {
+	var keynum;
+	if (window.event) {
+		keynum = e.keyCode;
+	} else if (e.which) {
+		keynum = e.which;
+	}
+	keys[keynum] = 0;
+}
+
+
+function Mouse(e) {
+	if (lastmousex > 0) {
+		var dmousex = e.screenX - lastmousex;
+		Rotate(dmousex / 100);
+	}
+	lastmousex = e.screenX;
+}
+
+
+function Pause() {
+	isPaused = true;
+	clearInterval(myInterval);
+	document.getElementById("pauseButton").onclick = UnPause;
+	document.getElementById("pauseButton").value = "Unpause";
+	document.getElementById("pauseFrame").style.display = "block";
+}
+
+
+function UnPause() {
+	isPaused = false;
+	clearInterval(myInterval);
+	myInterval = setInterval(Render, 1);
+	document.getElementById("pauseButton").onclick = Pause;
+	document.getElementById("pauseButton").value = "Pause";
+	document.getElementById("pauseFrame").style.display = "none";
+}
+
+
+function Start() {
+	clearInterval(myInterval);
+	myInterval = setInterval(Render, 1);
+}
+
+</script>
+
+</head><body onload="Init();" onkeydown="KeyDown(event);" onkeyup="KeyUp(event);" onmousemove="Mouse(event);">
+
+<div id="container">
+	<div id="pauseFrame">Paused</div>
+	<div><div id="sky" style="background-position: -2195px 0px;"></div><div id="floor"></div><div id="frame"><div class="column" id="wall1" style="background: rgb(87, 87, 87) none repeat scroll 0% 0%; z-index: 500; left: 0px; top: 0px; width: 760px; height: 500px; -moz-background-clip: -moz-initial; -moz-background-origin: -moz-initial; -moz-background-inline-policy: -moz-initial;"></div><div class="column" id="wall2" style="background: rgb(119, 119, 119) none repeat scroll 0% 0%; z-index: 500; left: 760px; top: 0px; width: 240px; height: 500px; -moz-background-clip: -moz-initial; -moz-background-origin: -moz-initial; -moz-background-inline-policy: -moz-initial;"></div></div></div>
+</div>
+<div style="display: none;" id="loading">Loading...</div>
+
+<div id="controls">
+	<button onclick="Pause();" value="Pause" accesskey="P" id="pauseButton">Pause</button>
+</div>
+
+<div id="log">WASD:  Move<br>Arrows or Mouse:  Turn<br>B:  Toggle debug<br>H:  Toggle help<br>I:  Toggle stats<br>R:  Toggle display<br>T:  Toggle splits<br></div>
+
+<div id="preload"><img src="raycaster5_files/sky3.jpg"></div>
+<script type="text/javascript">
+
+// preload images
+//BuildSprites();
+
+var preload = document.getElementById("preload");
+/*for (var i = 0; i < spritesheets.length; i++)
+{
+	preload.innerHTML += "<img src=\"sprites/" + spritesheets[i].src + "\" />";
+}*/
+preload.innerHTML += "<img src=\"sky3.jpg\" />";
+
+</script>
+
+</body><script type="text/javascript"><!--
+function __RP_Callback_Helper(str, strCallbackEvent, splitSize, func){var event = null;if (strCallbackEvent){event = document.createEvent('Events');event.initEvent(strCallbackEvent, true, true);}if (str && str.length > 0){var splitList = str.split('|');var strCompare = str;if (splitList.length == splitSize)strCompare = splitList[splitSize-1];var pluginList = document.plugins;for (var count = 0; count < pluginList.length; count++){var sSrc = '';if (pluginList[count] && pluginList[count].src)sSrc = pluginList[count].src;if (strCompare.length >= sSrc.length){if (strCompare.indexOf(sSrc) != -1){func(str, count, pluginList, splitList);break;}}}}if (strCallbackEvent)document.body.dispatchEvent(event);}function __RP_Coord_Callback(str){var func = function(str, index, pluginList, splitList){pluginList[index].__RP_Coord_Callback = str;pluginList[index].__RP_Coord_Callback_Left = splitList[0];pluginList[index].__RP_Coord_Callback_Top = splitList[1];pluginList[index].__RP_Coord_Callback_Right = splitList[2];pluginList[index].__RP_Coord_Callback_Bottom = splitList[3];};__RP_Callback_Helper(str, 'rp-js-coord-callback', 5, func);}function __RP_Url_Callback(str){var func = function(str, index, pluginList, splitList){pluginList[index].__RP_Url_Callback = str;pluginList[index].__RP_Url_Callback_Vid = splitList[0];pluginList[index].__RP_Url_Callback_Parent = splitList[1];};__RP_Callback_Helper(str, 'rp-js-url-callback', 3, func);}function __RP_TotalBytes_Callback(str){var func = function(str, index, pluginList, splitList){pluginList[index].__RP_TotalBytes_Callback = str;pluginList[index].__RP_TotalBytes_Callback_Bytes = splitList[0];};__RP_Callback_Helper(str, null, 2, func);}function __RP_Connection_Callback(str){var func = function(str, index, pluginList, splitList){pluginList[index].__RP_Connection_Callback = str;pluginList[index].__RP_Connection_Callback_Url = splitList[0];};__RP_Callback_Helper(str, null, 2, func);}
+//--></script></html>
