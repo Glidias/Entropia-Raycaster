@@ -7,3 +7,6 @@ Okay, let's get this straight, this guy's blog doesn't seem to have an email lin
 I've ported this guy's javascript code to Haxe to test out some features for Flash only, since conditional compiling in Haxe comes in real nifty in testing out different features. The roadmap is to create a 3d textured-version for Flash (among other stuff..), and if others may wish, develop other versions for other platforms. (JS canvas, C++, etc.). Optimisation is something I'd like to look into further here by adopting pooling of data objects and use of Alchemy memory registers for certain portions. With Haxe, this is very easy & beneficial to implement with it's inlining and built-in Alchemy opcodes for Flash.
 
 Currently, only Flash is supported and this is just a quick test, so take a look at the source code comment headers for more info.
+
+More info can be found here:
+http://github.com/Glidias/Entropia-Raycaster/wiki/The-Algorithm-and-the-Roadmap
