@@ -15,13 +15,14 @@ class Node
 	public var fColor:UInt;
 	public var wColor:UInt;
 	public var side:Int;
+	public var isValid:Bool;
 	
 	#if occlude
 	public var projY:Int;
 	public var prevProjY:Int;
 	#end
 
-	public function new(wallIdx:Int, t:Float, h1:Float, h2:Float, z:Float, fColor:UInt, wColor:UInt, side:Int #if occlude ,projY:Int, prevProjY:Int #end ) 
+	public function new(wallIdx:Int, t:Float, h1:Float, h2:Float, z:Float, fColor:UInt, wColor:UInt, side:Int #if occlude ,projY:Int, prevProjY:Int, isValid:Bool =true  #end ) 
 	{
 		this.wallIdx = wallIdx;
 		this.t = t;
@@ -31,10 +32,12 @@ class Node
 		this.fColor = fColor;
 		this.wColor = wColor;
 		this.side = side;
+	
 		
 		#if occlude
 		this.projY = projY;
 		this.prevProjY = prevProjY;
+		this.isValid = isValid;
 		#end
 	}
 	

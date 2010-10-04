@@ -351,8 +351,8 @@ function BuildMap()
 	
 	function Start() {
 		#if testPosition
-		setPosition(2.4582719422703474, 21.74154898122271);
-		setAngle( 0.032998163397447655);
+		setPosition(12.3, 22.44302741731605);
+		setAngle(2.712456934679069);
 		#end
 		
 		#if debugView
@@ -703,18 +703,19 @@ function BuildMap()
 			#if occlude
 			var testProj:Int = Project( t, maxF(h, prevH) );
 			// consider clip testProj to 0
-			if ( testProj <= yProj ) {	
+			//if ( testProj <= yProj ) {	
+			var isValid:Bool  = testProj <= yProj;
 			#end
-			
-				nodes.push( new Node(wallIdx, t, prevH, h, 500 -c,  prevFloorColor, mapWallColor[yi][xi], side #if occlude , testProj,  min( Project(t, prevH ), yProj) #end ));
+				
+				nodes.push( new Node(wallIdx, t, prevH, h, 500 -c,  prevFloorColor, mapWallColor[yi][xi], side #if occlude , testProj,  min( Project(t, prevH ), yProj), isValid  #end ));
 				
 			#if occlude	
-			}
-			yProj  = min(testProj, yProj) ;
+			//}
+			yProj  =  min(testProj, yProj);
 			#end
 			prevH = h;
 			prevFloorColor = mapFloorColor[yi][xi];
-			done = (h == MAX_HEIGHT #if occlude || testProj <= 0 #end );
+			done = (h == MAX_HEIGHT  ); //#if occlude || testProj <= 0 #end
 			c += 2;
 			if (c > 400) {
 				t = 400;
@@ -749,14 +750,17 @@ function BuildMap()
 					var rightY1 = #if occlude rightNode.prevProjY;  #else  Project(rightNode.t, h1); #end
 					var rightY2 = #if occlude rightNode.projY;      #else  Project(rightNode.t, h2); #end
 					var z = leftNodes[i].z;
+					
+					#if occlude if (leftNode.isValid || rightNode.isValid) { #end
+				
 					if (h1 < h2) {
-						CacheWall(leftNode.wallIdx, leftX, rightX, leftY2, rightY2, max(leftY1, rightY1) , z, wallColors[leftNode.wColor][leftNode.side]);
+						CacheWall(leftNode.wallIdx, leftX, rightX, leftY2, rightY2, max(leftY1, rightY1) , z, wallColors[leftNode.wColor][leftNode.side] #if occlude ,leftNode.isValid, rightNode.isValid #end );
 					}
-					CacheWall(mapWallIdxCount + leftNode.wallIdx, leftX, rightX, leftY1, rightY1, max(prevLeftY, prevRightY), z + 1, floorColors[leftNode.fColor]);
-					 
+					CacheWall(mapWallIdxCount + leftNode.wallIdx, leftX, rightX, leftY1, rightY1, max(prevLeftY, prevRightY), z + 1, floorColors[leftNode.fColor]  #if occlude , leftNode.isValid, rightNode.isValid #end );
+					#if occlude }  #end
 					prevH = h2;
-					prevLeftY = leftY2;
-					prevRightY = rightY2;
+					prevLeftY = #if occlude leftNode.isValid ? #end leftY2  #if occlude :   prevLeftY #end;
+					prevRightY = #if occlude rightNode.isValid ? #end rightY2  #if occlude :  prevRightY #end;
 				} else {
 					var middleX = Std.int((leftX + rightX) / 2);
 					var middleDx = dx1 + ddx * middleX;
@@ -779,16 +783,29 @@ function BuildMap()
 				var leftY1 = #if occlude leftNode.prevProjY; #else Project(leftNode.t, h1);	#end
 				var leftY2 = #if occlude leftNode.projY; #else Project(leftNode.t, h2);  #end
 				var z = leftNode.z;
+				#if occlude if (leftNode.isValid) { #end
 				if (h1 < h2) {
 					CacheWall(leftNode.wallIdx, leftX, rightX, leftY2, leftY2, leftY1 , z, wallColors[leftNode.wColor][leftNode.side]);
 				}
-				 CacheWall(mapWallIdxCount + leftNode.wallIdx, leftX, rightX, leftY1, leftY1, prevLeftY + 2, z + 1, floorColors[leftNode.fColor]);
-				prevLeftY = leftY2;
+				 CacheWall(mapWallIdxCount + leftNode.wallIdx, leftX, rightX, leftY1, leftY1, prevLeftY, z + 1, floorColors[leftNode.fColor]);
+				#if occlude } #end
+				prevLeftY =  #if occlude leftNode.isValid ? #end leftY2 #if occlude : prevLeftY #end;
 			}
 		}
 	}
+	/*
+	inline function CacheWallSurface(leftNode:Node, rightNode:Node, leftX:Int, rightX:Float):Void {
+		var wallIdx:Int = leftNode.wallIdx;
+		var wall:Wall = wallCache[ wallIdx ] || (wallCache[wallIdx] = new Wall(leftNode.);
+		
+		, leftX, rightX, leftY2, rightY2, max(leftY1, rightY1) , z, wallColors[leftNode.wColor][leftNode.side]
+	}
+	inline function CacheGroundSurface(leftNode:Node, rightNode:Node):Void {
+		
+	}
+	*/
 	
-	function CacheWall(wallIdx:Int, x1:Int, x2:Int, top1:Int, top2:Int, bottom:Int, z:Float, color:UInt):Void {
+	function CacheWall(wallIdx:Int, x1:Int, x2:Int, top1:Int, top2:Int, bottom:Int, z:Float, color:UInt #if occlude ,leftValid:Bool=true, rightValid:Bool=true #end):Void {
 		if (wallCache[wallIdx]) {
 			if (x1 < wallCache[wallIdx].x1) {
 				wallCache[wallIdx].x1 = x1;

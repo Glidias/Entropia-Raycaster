@@ -22,7 +22,7 @@
     <option mainClass="Main" />
     <option override="False" />
     <option verbose="False" />
-    <option additional="-D occludeX&#xA;-D testPositionX&#xA;-D debugViewX" />
+    <option additional="-D occlude&#xA;-D testPosition&#xA;-D debugViewX" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>
