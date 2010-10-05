@@ -37,7 +37,7 @@ class RaycastTest extends Sprite
 
 	static inline var CHARSIZE = .3;
 	static inline var VIEWHEIGHT = 1.5;
-	static inline var MAX_HEIGHT = 4;
+	static inline var MAX_HEIGHT = #if noMaxHeight 999  #else  4 #end;
 	static inline var MAXSTEP = .41;
 
 	// in meters per second:
@@ -157,6 +157,49 @@ class RaycastTest extends Sprite
 ///*
 function BuildMap()
 {
+	#if noMaxHeight
+		mapHeight = [
+		[4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,1.2,1.2,1.2,1.2,1.4,1.4,1.4,1.6,1.6,1.6,1.8,1.8,1.8,2.0,2.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,1.2,1.2,1.2,1.2,1.4,1.4,1.4,1.6,1.6,1.6,1.8,1.8,1.8,2.0,2.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,1.0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,1.0,1.0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,1.0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,0.8,0.8,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,4.0,4.0,  0,  0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,  0,  0,4.0 ],
+		[4.0,4.0,4.0,  0,  0,4.0,4.0,4.0,0.8,0.8,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,4.0,4.0,  0,  0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,0.8,0.8,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,0.6,0.6,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,0.6,0.6,  0,4.0,  0,  0,  0,  0,  0,  12,  12,  12,  0,  0,4.0,  0,  0,4.0,  0,  0,4.0,4.0,  0,  0,4.0,4.0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,0.6,0.6,  0,  0,  0,  0,  0,  0,  0,  7,  7,  12,  0,  0,4.0,  0,  0,4.0,  0,  0,4.0,4.0,  0,  0,4.0,4.0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,0.4,0.4,0.4,0.4,0.2,0.2,0.2,  0,  0,  7,  7,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,  0,  0,4.0,4.0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,0.4,0.4,0.4,0.4,0.2,0.2,0.2,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,  0,  0,4.0,4.0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,  0,  0,4.0,  0,  0,4.0,4.0,4.0,  0,  0,4.0,4.0,  0,  0,4.0,4.0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,4.0,4.0,  0,  0,4.0,4.0,  0,  0,4.0,4.0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,4.0,4.0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,  0,  0,4.0,0.3,0.3,4.0,  0,  0,4.0,4.0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,0.6,0.6,4.0,  0,  0,  0,  0,4.0,4.0,  0,  0,4.0,4.0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,1.2,  0,  0,  16,  16,  16,  0,  0,4.0,  0,  0,4.0,0.9,0.9,4.0,  0,  0,  0,  0,4.0,4.0,  0,  0,4.0,4.0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,1.2,  0,  0,  16,  16,  16,  0,  0,4.0,  0,  0,4.0,1.2,1.2,4.0,  0,  0,4.0,4.0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,1.2,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,1.5,1.5,4.0,  0,  0,4.0,4.0,  0,  0,  0,  0,  0,  0,4.0,1.0,1.0,4.0 ],
+		[4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,1.2,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,1.8,1.8,4.0,  0,  0,  0,  0,  0,  0,4.0,4.0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,1.2,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,2.1,2.1,2.1,4.0,  0,  0,  0,  0,  0,  0,4.0,4.0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0, -2, -2,4.0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,2.1,2.1,2.1,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,  0,4.0 ],
+		[4.0, -2, -2,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,1.0,  0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,1.0,1.0,  0,  0,  0,  0,  0,  0,1.0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,1.0,1.0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,1.0,  0,  0,  0,1.0,  0,  0,  0,  0,1.0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,1.0,1.0,  0,4.0 ],
+		[4.0,  0,1.0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,1.0,  0,  0,  0,  0,  0,1.0,  0,  0,  0,1.0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,1.0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,1.0,  0,  0,  0,1.0,  0,1.0,1.0,  0,  0,  0,  0,1.0,  0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,1.0,  0,  0,  0,  0,  0,1.0,  0,  0,  0,  0,  0,  0,  0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,1.0,  0,  0,  0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,1.0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
+		[4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0 ]];
+	#else
 	mapHeight = [
 		[4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0 ],
 		[4.0,  0,  0,  0,  0,  0,  0,4.0,1.2,1.2,1.2,1.2,1.4,1.4,1.4,1.6,1.6,1.6,1.8,1.8,1.8,2.0,2.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
@@ -197,7 +240,9 @@ function BuildMap()
 		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,1.0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
 		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
 		[4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
-		[4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0 ]];
+		[4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0 ]];
+	#end
+		
 	 mapFloorColor = [
 		[ 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 ],
 		[ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1 ],
@@ -547,6 +592,50 @@ function BuildMap()
 		var len:Int = wallArray.length;
 		for (i in 0...len) {
 			var wall = wallArray[i];
+			#if occlude
+			var leftClipped:Bool = wall.leftNode!= null ?  wall.leftNode.isClipped : false;
+			var rightClipped:Bool = wall.rightNode != null ? wall.rightNode.isClipped : leftClipped;
+			/*
+			if (leftClipped != rightClipped) {
+				//wall.color = 0xff0000;
+				if (leftClipped) {
+					wall.top1 = Project(wall.leftNode.t, wall.leftNode.h1);
+				}
+				else {
+					wall.top2 = Project(wall.rightNode.t, wall.rightNode.h1);
+				}
+				
+			}
+			*/
+			/*
+			else if (leftClipped && rightClipped) {
+				if (wall.top1 > wall.top2) {
+					wall.top2 = wall.top1;
+				}
+				else {
+					wall.top1 = wall.top2;
+				}
+			}
+			*/
+			//else 
+			
+			if (wall.dirtyFlag == 3) {
+				
+				if (wall.leftNode!=null) wall.top1 = Project(wall.leftNode.t, wall.leftNode.h1);
+				if (wall.rightNode != null) wall.top2 = Project(wall.rightNode.t, wall.rightNode.h1);
+				
+			}
+			
+			if (leftClipped && rightClipped) {
+				if (wall.top1 > wall.top2) {
+					wall.top2 = wall.top1;
+				}
+				else {
+					wall.top1 = wall.top2;
+				}
+			}
+
+			#end
 			AddDiv(wall.x1, wall.x2, wall.top1, wall.top2, wall.bottom, wall.z, wall.color);
 		}
 		
@@ -666,6 +755,7 @@ function BuildMap()
 			dyt = 1 / dy;
 			dyi = 1;
 		}
+
 		var t = .0; // intersection time
 		var done:Bool = false;
 		var c = 0; // intersection count
@@ -696,7 +786,13 @@ function BuildMap()
 				wallIdx = GetWallIndex(xi, yi - dyi, xi, yi);
 				yt += dyt;
 			}
-			
+			#if noMaxHeight
+			if (yi < 0 || yi >( mapDepth-1) || xi < 0 || xi > (mapWidth-1) ) {
+				done = true;
+				break;
+			}
+			#end
+		
 			h = mapHeight[yi][xi];
 			xint = player.x + t * dx;
 			yint = player.y + t * dy;
@@ -706,8 +802,8 @@ function BuildMap()
 			//if ( testProj <= yProj ) {	
 			var isValid:Bool  = testProj <= yProj;
 			#end
-				
-				nodes.push( new Node(wallIdx, t, prevH, h, 500 -c,  prevFloorColor, mapWallColor[yi][xi], side #if occlude , testProj,  min( Project(t, prevH ), yProj), isValid  #end ));
+				var ppH:Int = Project(t, prevH );
+				nodes.push( new Node(wallIdx, t, prevH, h, 500 -c,  prevFloorColor, mapWallColor[yi][xi], side #if occlude , testProj,  min(ppH , yProj), isValid, yProj<ppH  #end ));
 				
 			#if occlude	
 			//}
@@ -715,7 +811,7 @@ function BuildMap()
 			#end
 			prevH = h;
 			prevFloorColor = mapFloorColor[yi][xi];
-			done = (h == MAX_HEIGHT  ); //#if occlude || testProj <= 0 #end
+			done = (h == MAX_HEIGHT #if (occlude && occludeEarlyOut) || testProj <= 0 #end ); //
 			c += 2;
 			if (c > 400) {
 				t = 400;
@@ -749,14 +845,17 @@ function BuildMap()
 					var leftY2 =  #if occlude leftNode.projY;       #else  Project(leftNode.t, h2); #end
 					var rightY1 = #if occlude rightNode.prevProjY;  #else  Project(rightNode.t, h1); #end
 					var rightY2 = #if occlude rightNode.projY;      #else  Project(rightNode.t, h2); #end
+					#if occlude
+	
+					#end
 					var z = leftNodes[i].z;
 					
 					#if occlude if (leftNode.isValid || rightNode.isValid) { #end
 				
 					if (h1 < h2) {
-						CacheWall(leftNode.wallIdx, leftX, rightX, leftY2, rightY2, max(leftY1, rightY1) , z, wallColors[leftNode.wColor][leftNode.side] #if occlude ,leftNode.isValid, rightNode.isValid #end );
+						CacheWall(leftNode.wallIdx, leftX, rightX, leftY2, rightY2, max(leftY1, rightY1) , z, wallColors[leftNode.wColor][leftNode.side] #if occlude  #end );
 					}
-					CacheWall(mapWallIdxCount + leftNode.wallIdx, leftX, rightX, leftY1, rightY1, max(prevLeftY, prevRightY), z + 1, floorColors[leftNode.fColor]  #if occlude , leftNode.isValid, rightNode.isValid #end );
+					CacheWall(mapWallIdxCount + leftNode.wallIdx, leftX, rightX, leftY1, rightY1, max(prevLeftY, prevRightY), z + 1, floorColors[leftNode.fColor]  #if occlude , leftNode, rightNode #end );
 					#if occlude }  #end
 					prevH = h2;
 					prevLeftY = #if occlude leftNode.isValid ? #end leftY2  #if occlude :   prevLeftY #end;
@@ -787,7 +886,7 @@ function BuildMap()
 				if (h1 < h2) {
 					CacheWall(leftNode.wallIdx, leftX, rightX, leftY2, leftY2, leftY1 , z, wallColors[leftNode.wColor][leftNode.side]);
 				}
-				 CacheWall(mapWallIdxCount + leftNode.wallIdx, leftX, rightX, leftY1, leftY1, prevLeftY, z + 1, floorColors[leftNode.fColor]);
+				 CacheWall(mapWallIdxCount + leftNode.wallIdx, leftX, rightX, leftY1, leftY1, prevLeftY, z + 1, floorColors[leftNode.fColor] #if occlude , leftNode #end);
 				#if occlude } #end
 				prevLeftY =  #if occlude leftNode.isValid ? #end leftY2 #if occlude : prevLeftY #end;
 			}
@@ -805,21 +904,35 @@ function BuildMap()
 	}
 	*/
 	
-	function CacheWall(wallIdx:Int, x1:Int, x2:Int, top1:Int, top2:Int, bottom:Int, z:Float, color:UInt #if occlude ,leftValid:Bool=true, rightValid:Bool=true #end):Void {
-		if (wallCache[wallIdx]) {
+	function CacheWall(wallIdx:Int, x1:Int, x2:Int, top1:Int, top2:Int, bottom:Int, z:Float, color:UInt #if occlude , leftNode:Node = null, rightNode:Node = null #end):Void {
+		var wall:Wall;
+		//leftNode.isClipped;
+		if ( (wall = wallCache[wallIdx]) != null ) {
+			#if occlude
+			wall.dirtyFlag |= leftNode != null ? leftNode.isClipped ? 2 : 1 : 0;
+			wall.dirtyFlag |= rightNode != null ? rightNode.isClipped ? 2 : 1 : 0;
+			#end
 			if (x1 < wallCache[wallIdx].x1) {
-				wallCache[wallIdx].x1 = x1;
-				wallCache[wallIdx].top1 = top1;
+				wall.x1 = x1;
+				wall.top1 = top1;
+				#if occlude
+				if (leftNode != null) wall.leftNode = leftNode;
+				#end
 			}
-			if (x2 > wallCache[wallIdx].x2) {
-				wallCache[wallIdx].x2 = x2;
-				wallCache[wallIdx].top2 = top2;
+			if (x2 > wall.x2) {
+				wall.x2 = x2;
+				wall.top2 = top2;
+				#if occlude
+				if (rightNode!=null) wall.rightNode = rightNode;
+				#end
 			}
-			wallCache[wallIdx].bottom = max(wallCache[wallIdx].bottom, bottom);
+			wall.bottom = max(wall.bottom, bottom);
+			
 		} else {
 			wallcount++;
+			
 			wallArray.push ( 
-				wallCache[wallIdx] = new Wall(
+				wallCache[wallIdx] = wall= new Wall(
 					 x1,
 					 x2,
 					 top1,
@@ -828,8 +941,15 @@ function BuildMap()
 					 z,
 					 color ) 
 			);
+			#if occlude
+			wall.leftNode = leftNode;
+			wall.rightNode = rightNode;
+			wall.dirtyFlag |= leftNode != null ? leftNode.isClipped ? 2 : 1 : 0;
+			wall.dirtyFlag |= rightNode != null ? rightNode.isClipped ? 2 : 1 : 0;
+			#end
 		}
-}
+	}
+
 
 	inline function GetWallIndex(x1:Int, y1:Int, x2:Int, y2:Int):Int {
 		return x1 == x2  ? mapWidth * min(y1, y2) + x1 : mapWidth * (mapDepth + 1) + (mapWidth + 1) * y1 + min(x1, x2);

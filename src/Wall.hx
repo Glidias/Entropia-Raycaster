@@ -14,6 +14,12 @@ class Wall
 	public var bottom : Int;
 	public var z : Float;
 	public var color : UInt;
+	
+	#if occlude
+	public var leftNode:Node;
+	public var rightNode:Node;
+	public var dirtyFlag:Int;
+	#end
 
 	public function new(x1:Int, x2:Int, top1:Int, top2:Int, bottom:Int, z:Float, color:UInt) 
 	{
@@ -24,6 +30,10 @@ class Wall
 		this.bottom = bottom;
 		this.z = z;
 		this.color = color;
+		
+		#if occlude
+		dirtyFlag = 0;
+		#end
 	}
 	
 }

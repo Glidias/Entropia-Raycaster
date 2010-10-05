@@ -20,9 +20,10 @@ class Node
 	#if occlude
 	public var projY:Int;
 	public var prevProjY:Int;
+	public var isClipped:Bool;
 	#end
 
-	public function new(wallIdx:Int, t:Float, h1:Float, h2:Float, z:Float, fColor:UInt, wColor:UInt, side:Int #if occlude ,projY:Int, prevProjY:Int, isValid:Bool =true  #end ) 
+	public function new(wallIdx:Int, t:Float, h1:Float, h2:Float, z:Float, fColor:UInt, wColor:UInt, side:Int #if occlude ,projY:Int, prevProjY:Int, isValid:Bool =true, isClipped:Bool=false  #end ) 
 	{
 		this.wallIdx = wallIdx;
 		this.t = t;
@@ -38,6 +39,7 @@ class Node
 		this.projY = projY;
 		this.prevProjY = prevProjY;
 		this.isValid = isValid;
+		this.isClipped = isClipped;
 		#end
 	}
 	
