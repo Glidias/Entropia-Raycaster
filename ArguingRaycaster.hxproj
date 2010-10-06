@@ -20,9 +20,8 @@
     <option directives="" />
     <option flashStrict="False" />
     <option mainClass="Main" />
-    <option override="False" />
-    <option verbose="False" />
-    <option additional="-D occlude&#xA;-D occludeEarlyOutX&#xA;-D testPositionX&#xA;-D debugViewX&#xA;-D noMaxHeight" />
+    <option enabledebug="False" />
+    <option additional="-D occlude&#xA;-D occludeEarlyOutX&#xA;-D clippedBottoms&#xA;-D testPosition&#xA;-D debugViewX&#xA;-D noMaxHeight" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>

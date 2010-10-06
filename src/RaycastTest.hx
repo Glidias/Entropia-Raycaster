@@ -2,11 +2,16 @@
  * @author Tyler Spaulding
  * @author Glenn Ko	(ported over to Haxe for Flash/Fp10 AS3)
  * 
+ * Test-bed for any new features...
+ * 
  *  Compiler directives include:
  * 
--D occlude			To test occlusion culling/clipping ( recently added feature - Glenn)
--D testPosition		To start from a particular starting position/angle based on code ( see Start() );
--D debugView		To turn on debug view at the beginning ( see Start() ) 
+-D occlude				To test occlusion culling/clipping
+-D occludeEarlyOut		Whether to skip further raycast jumps if a wall covers the entire height of a screen
+-D clippedBottoms		Whether to clip the bottom edges of walls during occlusion. (instead of drawing it's entire height)
+-D noMaxHeight			If enabled, uses a map with no building height limits. 
+-D testPosition			To start at a recorded starting position/angle based on code ( see Start() );
+-D debugView			To turn on debug view at the beginning ( see Start() ) which allows one to view surfaces transparently.
 
  * See SetupToggles() for a list of available key toggles at the moment.
  */
@@ -162,13 +167,13 @@ function BuildMap()
 		[4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0 ],
 		[4.0,  0,  0,  0,  0,  0,  0,4.0,1.2,1.2,1.2,1.2,1.4,1.4,1.4,1.6,1.6,1.6,1.8,1.8,1.8,2.0,2.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
 		[4.0,  0,  0,  0,  0,  0,  0,4.0,1.2,1.2,1.2,1.2,1.4,1.4,1.4,1.6,1.6,1.6,1.8,1.8,1.8,2.0,2.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0 ],
-		[4.0,  0,  0,  0,  0,  0,  0,4.0,1.0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,  0,  0,4.0 ],
-		[4.0,  0,  0,  0,  0,  0,  0,4.0,1.0,1.0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
-		[4.0,  0,  0,  0,  0,  0,  0,4.0,1.0,1.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
-		[4.0,  0,  0,  0,  0,  0,  0,4.0,0.8,0.8,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,4.0,4.0,  0,  0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,  0,  0,4.0 ],
-		[4.0,4.0,4.0,  0,  0,4.0,4.0,4.0,0.8,0.8,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,4.0,4.0,  0,  0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,  0,  0,4.0 ],
-		[4.0,  0,  0,  0,  0,  0,  0,4.0,0.8,0.8,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
-		[4.0,  0,  0,  0,  0,  0,  0,4.0,0.6,0.6,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,1.0,1.0,  0,  0,1.4,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,1.0,1.0,  0,4.0,1.5,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,1.0,1.0,  0,  0,1.6,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,0.8,0.8,  0,  0,1.8,2.0,2.2,2.4,2.6,2.8,  0,  0,  0,  0,4.0,  0,  0,4.0,4.0,4.0,  0,  0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,  0,  0,4.0 ],
+		[4.0,4.0,4.0,  0,  0,4.0,4.0,4.0,0.8,0.8,  0,  0,  0,  3.8,3.6,3.4,3.2, 3.0,  0,  0,  0,  0,4.0,  0,  0,4.0,4.0,4.0,  0,  0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,0.8,0.8,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
+		[4.0,  0,  0,  0,  0,  0,  0,4.0,0.6,0.6,  0,  0,  0, 4.2,  4.4,  4.6,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
 		[4.0,  0,  0,  0,  0,  0,  0,4.0,0.6,0.6,  0,4.0,  0,  0,  0,  0,  0,  12,  12,  12,  0,  0,4.0,  0,  0,4.0,  0,  0,4.0,4.0,  0,  0,4.0,4.0,  0,  0,4.0,  0,  0,4.0 ],
 		[4.0,  0,  0,  0,  0,  0,  0,4.0,0.6,0.6,  0,  0,  0,  0,  0,  0,  0,  7,  7,  12,  0,  0,4.0,  0,  0,4.0,  0,  0,4.0,4.0,  0,  0,4.0,4.0,  0,  0,4.0,  0,  0,4.0 ],
 		[4.0,  0,  0,  0,  0,  0,  0,4.0,0.4,0.4,0.4,0.4,0.2,0.2,0.2,  0,  0,  7,  7,  0,  0,  0,4.0,  0,  0,4.0,  0,  0,  0,  0,4.0,4.0,  0,  0,  0,  0,4.0,  0,  0,4.0 ],
@@ -396,8 +401,8 @@ function BuildMap()
 	
 	function Start() {
 		#if testPosition
-		setPosition(12.3, 22.44302741731605);
-		setAngle(2.712456934679069);
+		setPosition(24.7, 24.064928781071682);
+		setAngle(4.192212856217854);
 		#end
 		
 		#if debugView
@@ -595,48 +600,41 @@ function BuildMap()
 			#if occlude
 			var leftClipped:Bool = wall.leftNode!= null ?  wall.leftNode.isClipped : false;
 			var rightClipped:Bool = wall.rightNode != null ? wall.rightNode.isClipped : leftClipped;
-			/*
-			if (leftClipped != rightClipped) {
-				//wall.color = 0xff0000;
-				if (leftClipped) {
-					wall.top1 = Project(wall.leftNode.t, wall.leftNode.h1);
-				}
-				else {
-					wall.top2 = Project(wall.rightNode.t, wall.rightNode.h1);
-				}
-				
-			}
-			*/
-			/*
-			else if (leftClipped && rightClipped) {
-				if (wall.top1 > wall.top2) {
-					wall.top2 = wall.top1;
-				}
-				else {
-					wall.top1 = wall.top2;
-				}
-			}
-			*/
-			//else 
+	
 			
 			if (wall.dirtyFlag == 3) {
 				
 				if (wall.leftNode!=null) wall.top1 = Project(wall.leftNode.t, wall.leftNode.h1);
 				if (wall.rightNode != null) wall.top2 = Project(wall.rightNode.t, wall.rightNode.h1);
 				
+				
 			}
 			
-			if (leftClipped && rightClipped) {
+			var wallIsClipped:Bool = leftClipped && rightClipped && wall.dirtyFlag != 3;
+			/*
+			if () {
 				if (wall.top1 > wall.top2) {
 					wall.top2 = wall.top1;
 				}
 				else {
 					wall.top1 = wall.top2;
 				}
+				wallIsClipped = wall.dirtyFlag != 3;
 			}
-
+			*/
 			#end
+			
+			#if occlude  
+			if (!wallIsClipped) {
+			#end
+		
+			//wall.bottom += 16;
+			//wall.bottom+= wallIsCl16;  // for the case of step-downs, the bottoms need to be extended to fill
+			// possible whitespaces
 			AddDiv(wall.x1, wall.x2, wall.top1, wall.top2, wall.bottom, wall.z, wall.color);
+			#if occlude
+			}
+			#end
 		}
 		
 		
@@ -767,6 +765,7 @@ function BuildMap()
 		var side:Int;
 		var xint:Float;
 		var yint:Float;
+		var lastH:Float = 0;
 		
 		#if occlude
 		var yProj:Int = 1000;
@@ -803,11 +802,16 @@ function BuildMap()
 			var isValid:Bool  = testProj <= yProj;
 			#end
 				var ppH:Int = Project(t, prevH );
-				nodes.push( new Node(wallIdx, t, prevH, h, 500 -c,  prevFloorColor, mapWallColor[yi][xi], side #if occlude , testProj,  min(ppH , yProj), isValid, yProj<ppH  #end ));
+				
+				nodes.push( new Node(wallIdx, t, prevH, h, 500 -c,  prevFloorColor, mapWallColor[yi][xi], side #if occlude , testProj,  #if clippedBottoms min(ppH , yProj) #else ppH #end, isValid, yProj<=ppH  #end ));
 				
 			#if occlude	
 			//}
-			yProj  =  min(testProj, yProj);
+			
+			if (testProj < yProj) lastH = h;
+			
+			//if (prevH != h) 
+			yProj  = prevH > h && prevH - h < 1.2  ? yProj : min(testProj, yProj);  //2 without artifacts
 			#end
 			prevH = h;
 			prevFloorColor = mapFloorColor[yi][xi];
@@ -825,6 +829,9 @@ function BuildMap()
 		return Std.int(250 - 250 * (h - player.h - viewBob) / t);
 	}
 	
+	inline function diff(v1:Float, v2:Float):Float {
+		return v1 < v2 ? v2 - v1 : v2 - v1;
+	}
 	
 	
 	function SplitRay(left:Ray, right:Ray, firstIntIdx:Int, prevH:Float, prevLeftY:Int, prevRightY:Int):Void {
@@ -855,7 +862,7 @@ function BuildMap()
 					if (h1 < h2) {
 						CacheWall(leftNode.wallIdx, leftX, rightX, leftY2, rightY2, max(leftY1, rightY1) , z, wallColors[leftNode.wColor][leftNode.side] #if occlude  #end );
 					}
-					CacheWall(mapWallIdxCount + leftNode.wallIdx, leftX, rightX, leftY1, rightY1, max(prevLeftY, prevRightY), z + 1, floorColors[leftNode.fColor]  #if occlude , leftNode, rightNode #end );
+					CacheWall(mapWallIdxCount + leftNode.wallIdx, leftX, rightX, leftY1, rightY1, max(prevLeftY, prevRightY) + 2, z + 1, floorColors[leftNode.fColor]  #if occlude , leftNode, rightNode #end );
 					#if occlude }  #end
 					prevH = h2;
 					prevLeftY = #if occlude leftNode.isValid ? #end leftY2  #if occlude :   prevLeftY #end;
@@ -886,7 +893,7 @@ function BuildMap()
 				if (h1 < h2) {
 					CacheWall(leftNode.wallIdx, leftX, rightX, leftY2, leftY2, leftY1 , z, wallColors[leftNode.wColor][leftNode.side]);
 				}
-				 CacheWall(mapWallIdxCount + leftNode.wallIdx, leftX, rightX, leftY1, leftY1, prevLeftY, z + 1, floorColors[leftNode.fColor] #if occlude , leftNode #end);
+				 CacheWall(mapWallIdxCount + leftNode.wallIdx, leftX, rightX, leftY1, leftY1, prevLeftY + 2, z + 1, floorColors[leftNode.fColor] #if occlude , leftNode #end);
 				#if occlude } #end
 				prevLeftY =  #if occlude leftNode.isValid ? #end leftY2 #if occlude : prevLeftY #end;
 			}
